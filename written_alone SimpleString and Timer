@@ -1,0 +1,129 @@
+#include <iostream>
+#include <vector>
+#include <stdexcept>
+#include <exception>
+#include <utility>
+#include <cstring>
+#include <ctime>
+
+struct TimerClass{
+    TimerClass(const char* name): name{name}{
+        timenow=time(0);
+        char* dt = ctime(&timenow);
+        std::cout << "The local date and time is: " << dt << std::endl;
+        for(long unsigned i=0; i<1000000000UL; i++);
+        
+    }
+    
+    ~TimerClass(){
+        time_t destruct_time=time(0);
+        double val = difftime(timenow, destruct_time); 
+        std::cout << val <<  std::endl;
+        std::cout <<"Timer " << name << " is destructed" << std::endl;
+    }
+
+    TimerClass(const TimerClass& tc): timenow{tc.timenow}{
+        
+    }
+
+    TimerClass& operator=(const TimerClass& tc){
+        if(this==&tc) return *this;
+        timenow=tc.timenow;
+        return *this;
+    }
+
+    TimerClass(TimerClass&& tc) noexcept :timenow{tc.timenow}, name{tc.name}{
+        char * x =const_cast<char*>(tc.name);
+        x=nullptr;
+        tc.timenow.~time_t();
+    }
+
+    TimerClass& operator=(TimerClass&& tc) noexcept{
+        if(this ==&tc) return *this;
+        timenow=tc.timenow;
+        tc.timenow.~time_t();
+        return *this;
+    }
+
+
+private:
+    time_t timenow;
+    const char* name;
+};
+
+struct SimpleString{
+    SimpleString(size_t max_size): max_size{max_size}, length{0}{
+        if(max_size==0){
+            throw std::runtime_error{"Max size must be at least 1"};
+        }
+        buffer = new char[max_size];
+    }
+
+    ~SimpleString(){
+        delete[] buffer;
+    }
+
+    SimpleString(const SimpleString& other): length{other.length}, max_size{other.max_size},
+    buffer{new char[max_size]}{
+       std::strncpy(buffer, other.buffer, max_size);
+    }
+
+    SimpleString& operator=(const SimpleString& other){
+        if(this == &other){
+            return *this;
+        }
+
+        length=other.length;
+        max_size=other.max_size;
+        const auto new_buffer = new char[other.max_size];
+        delete[] buffer;
+        buffer=new_buffer;
+        std::strncpy(buffer, other.buffer, max_size);
+        return *this;
+    }
+
+    SimpleString(SimpleString&& other) noexcept: length{other.length}, max_size{other.max_size}, buffer{other.buffer}{
+        other.buffer=nullptr;
+        other.length=0;
+        other.max_size=0;
+    }
+
+    SimpleString& operator=(SimpleString&& other) noexcept{
+        if(this== &other) return *this;
+        length =other.length; 
+        max_size =other.max_size; 
+        delete[] buffer;
+        buffer=other.buffer;
+        other.buffer=nullptr;
+        other.length=0;
+        other.max_size=0;
+
+        return *this;
+    }
+
+    void print(const char* tag) const{
+       printf("%s : %s", tag , buffer);
+    }
+
+    bool append_line(const char * x){
+        const auto x_len=strlen(x);
+        if(x_len+length+2 > max_size) return false;
+        std::strncpy(buffer+length, x, max_size-length);
+        length += x_len;
+        buffer[length++] = '\n';
+        buffer[length] = 0;
+        return true;
+    }
+private:
+    size_t max_size;
+    size_t length;
+    char * buffer;
+};
+
+int main(){
+  
+
+    TimerClass T1("mud");
+    TimerClass T2("mud2");
+    TimerClass T3(std::move(T1));
+}
